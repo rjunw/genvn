@@ -8,7 +8,7 @@ TODO: Summarize project + goals
 
 ### Story-Telling Engine
 
-Modular LLM framework running on a FastAPI backend to separate heavy-lifting from the lightweight Ren'Py frontend. Will start on ollama/HF for local dev, but extend to other popular APIs like Gemini/OpenAI if time permits.
+Modular LLM framework running on a FastAPI backend to separate heavy-lifting from the lightweight Ren'Py/Godot Dialogic 2 frontend. Will start on ollama/HF for local dev, but extend to other popular APIs like Gemini/OpenAI if time permits.
 
 - Can add option for VLM capabilities, so user can upload an image along with text to prompt next story responses (i.e. inputting an image to setup the premise of a custom scenario)
 
@@ -21,7 +21,7 @@ Will keep this portion modular, but currently enstating paired text embeddings f
 
 Search will run via FAISS on locally built indices, allowing for easy serialization.
 
-Retrieved objects will be incorporated into both story-telling engine context and displayed in the Ren'Py frontend.
+Retrieved objects will be incorporated into both story-telling engine context and displayed in the frontend.
 
 ### Dynamic Story Graphs
 
