@@ -10,6 +10,8 @@ TODO: Summarize project + goals
 
 Modular LLM framework running on a FastAPI backend to separate heavy-lifting from the lightweight Ren'Py frontend. Will start on ollama/HF for local dev, but extend to other popular APIs like Gemini/OpenAI if time permits.
 
+- Can add option for VLM capabilities, so user can upload an image along with text to prompt next story responses (i.e. inputting an image to setup the premise of a custom scenario)
+
 ### Automated Retrieval Engine
 
 Will keep this portion modular, but currently enstating paired text embeddings for Image-Text features and Audio-Text features.
