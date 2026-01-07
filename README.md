@@ -30,4 +30,5 @@ Starting a new scenario will instance a root node, that will extend during user 
 - Each request to the story-telling engine will return a structured response representing a new node that can be inserted into the story graph
 - While in a scene, we traverse backwards through user choice DAG and when we enter a new scene, we pull longer-term memory into the context
 - Encoding and decoding graph through JSON (if I decide to build a graph object) can be used for save states, but will likely need two states, one for vector database and one for story graph time-travel
+- Give the user the option to mark a node as "important", guaranteeing that it will be retrieved during GraphRAG
 - Also planning on implementing functionality for sharing stories between different users
