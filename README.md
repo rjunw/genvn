@@ -4,6 +4,8 @@
 
 TODO: Summarize project + goals
 
+I'm doing this project to learn game dev, as well as good engineering practices, so I'll try writing the most clean code possible.
+
 ## Components
 
 ### Story-Telling Engine
