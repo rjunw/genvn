@@ -31,7 +31,7 @@ class GraphRAG:
             user_choice: User's choice for the story to find relevant visual/audio content
             active_chars: List of active characters to find relevant memory/lore
         """
-        return ["Sky: The sky is blue because of I, the lord, the sky, was born that way.", "Sky: I was born under the sea, and so the sky reflects me."]
+        return [{"role": "Sky", "content": "The sky is blue because of I, the lord, the sky, was born that way."}, {"role": "Sky", "content": "I was born under the sea, and so the sky reflects me."}]
 
     def generate_stream(self, scene_id: str, context: str, active_chars: List[str], history: List[str], user_choice: str, options: Dict[str, str]):
         """
@@ -95,18 +95,22 @@ class GraphRAG:
 if __name__ == "__main__":
     from app.models.llm_wrapper import OllamaAdapter
     user_choice = "But Why?"
-    history = ["Are you sure the sky is blue?", "Yes I'm sure."]
+    history = [
+        {"role": "user", "content": "Are you sure the sky is blue?"},
+        {"role": "Sky", "content": "Yes I'm sure."}
+    ]
     rag_engine = GraphRAG(llm_adapter=OllamaAdapter(url="http://localhost:11434", model="gemma3"))
 
-    retrieved_context = rag_engine.retrieve(scene_id="ID0001", context=["Why is the sky blue?"], active_chars=[], user_choice=user_choice)
+    context = "Why do you think the sky is blue?"
+    retrieved_context = rag_engine.retrieve(scene_id="ID0001", context=context, active_chars=[], user_choice=user_choice)
     print(retrieved_context)
 
     print(rag_engine._build_system_prompt(retrieved_context))
 
 
-    for chunk in rag_engine.generate_stream(scene_id="ID0001", context=["Why is the sky blue?"], active_chars=[], history=history, user_choice=user_choice, options={}):
+    for chunk in rag_engine.generate_stream(scene_id="ID0001", context=context, active_chars=[], history=history, user_choice=user_choice, options={}):
         print(chunk)
 
-    chunk = rag_engine.generate_chunk(scene_id="ID0001", context=["Why is the sky blue?"], active_chars=[], history=history, user_choice=user_choice, options={})
+    chunk = rag_engine.generate_chunk(scene_id="ID0001", context=context, active_chars=[], history=history, user_choice=user_choice, options={})
     print(chunk)
     print('\n' + chunk['message']['content'])
