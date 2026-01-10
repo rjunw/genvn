@@ -14,6 +14,9 @@ rag_engine = GraphRAG()
 
 @router.post("/generate_stream")
 async def generate_stream(request: StoryRequest):
+    """
+    Endpoint to generate the next story dialogue as a stream.
+    """
     context = rag_engine.retrieve(
         scene_id=request.scene_id,
         context=request.context, 
@@ -27,6 +30,9 @@ async def generate_stream(request: StoryRequest):
 
 @router.post("/generate_chunk")
 async def generate_chunk(request: StoryRequest):
+    """
+    Endpoint to generate the next story dialogue as a chunk.
+    """
     context = rag_engine.retrieve(
         scene_id=request.scene_id,
         context=request.context,
@@ -37,3 +43,10 @@ async def generate_chunk(request: StoryRequest):
         user_choice=request.user_choice
     )
     return JSONResponse(content=response)
+
+@router.get("/save_story")
+async def save_story():
+    """
+    Endpoint to save in-memory kuzu db (dynamic story graph)
+    """
+    pass

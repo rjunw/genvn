@@ -65,7 +65,7 @@ class GraphRAG:
 
         Should follow Dialogic 2's 'timeline text syntax': https://docs.dialogic.pro/timeline-text-syntax.html
 
-        TODO: Express all timeline options
+        TODO: Express all timeline options or maybe return json and decode in frontend timeline
         """
 
         system_prompt = f"""
