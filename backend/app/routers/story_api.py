@@ -48,5 +48,7 @@ async def generate_chunk(request: StoryRequest):
 async def save_story():
     """
     Endpoint to save in-memory kuzu db (dynamic story graph)
+
+    TODO: save as json or parquet... thinking...
     """
     pass

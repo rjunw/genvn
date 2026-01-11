@@ -8,11 +8,13 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
-    
+
     BASE_PATH: Path = Path(__file__).parent.parent
     KUZU_DB_PATH: Path = BASE_PATH / "data" / "kuzu"
     ASSET_PATH: Path = BASE_PATH / "data" / "assets"
-    
+
+    DEVICE: str = "cpu"
+
     # ollama settings
     OLLAMA_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "gemma3"
