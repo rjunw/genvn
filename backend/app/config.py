@@ -2,6 +2,8 @@
 # Config
 #
 # Handles configuration for the application, i.e. paths, models, etc.
+# TODO: should i split the settings into their own subsetting classes?
+#   - i.e. DatabaseSettings, LLMSettings, EmbeddingSettings, etc.
 # ------------------------------------------------------------------------
 
 from pathlib import Path
@@ -9,7 +11,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
 
-    BASE_PATH: Path = Path(__file__).parent.parent
+    BASE_PATH: Path = Path('./backend')
     KUZU_DB_PATH: Path = BASE_PATH / "data" / "kuzu"
     ASSET_PATH: Path = BASE_PATH / "data" / "assets"
 
@@ -20,8 +22,8 @@ class Settings(BaseSettings):
     OLLAMA_MODEL: str = "gemma3"
 
     # embedding models
-    IMAGE_TEXT_MODEL_ID: str = "google/siglip2-large-patch16-256"
-    IMAGE_TEXT_DIM: int = 1024 # siglip2-large-patch16-256
+    IMAGE_TEXT_MODEL_ID: str = "google/siglip2-so400m-patch16-naflex"
+    IMAGE_TEXT_DIM: int = 1152 # siglip2-large-patch16-256
     AUDIO_TEXT_MODEL_ID: str = ""
     AUDIO_TEXT_DIM: int = 0
 
@@ -37,7 +39,7 @@ class Settings(BaseSettings):
         self.ASSET_PATH.mkdir(exist_ok=True)
 
 settings = Settings()
-settings._ensure_dirs() # create directories if they don't exist
+# settings._ensure_dirs() # create directories if they don't exist
 
 if __name__ == "__main__":
     print(settings.BASE_PATH)

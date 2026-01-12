@@ -78,10 +78,16 @@ class OllamaAdapter(LLMAdapter):
         response = requests.post(self.chat_url, json=payload)
         return response.json()
 
+    def list_models(self):
+        response = requests.get(f"{self.url}/api/tags")
+        return response.json()
+
 
 
 if __name__ == "__main__":
     adapter = OllamaAdapter(url="http://localhost:11434", model="gemma3")
+    print(adapter.list_models())
+    
     # treat chat_stream as a generator
     for chunk in adapter.chat_stream(messages=[
         {
@@ -98,5 +104,6 @@ if __name__ == "__main__":
         }
     ])
     print(chunk)
+    
 
     

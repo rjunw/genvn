@@ -5,10 +5,14 @@
 # - Kuzu as opposed to Neo4j or Memgraph which require server-client setup
 # - Kuzu runs without server overhead, so it's better suited for game logic
 # ------------------------------------------------------------------------
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
 from pathlib import Path
 import kuzu
-from config import settings
+from app.config import settings
 from abc import ABC, abstractmethod
 
 # kuzu is discontinued, so defining interface to allow for easy switching in case
@@ -50,7 +54,19 @@ class KuzuDB(DB):
         """
         Create schema for the database.
         """
-        pass
+
+        columns = ""
+        for column in schema:
+            if column == "table_name":
+                continue
+            columns += f"{column} {schema[column]}, "
+        columns = columns[:-2]
+        q = f"""
+        CREATE NODE TABLE IF NOT EXISTS {schema["table_name"]}({columns});
+        """
+        # print(q)
+        self.conn.execute(q)
+
 
 def get_db(db_type: str = "kuzu", db_path: Path = settings.KUZU_DB_PATH / "vdb.kuzu"):
     if db_type == "kuzu":
@@ -61,4 +77,20 @@ def get_db(db_type: str = "kuzu", db_path: Path = settings.KUZU_DB_PATH / "vdb.k
 if __name__ == "__main__":
     db = get_db()
     print(db.conn)
-    
+
+    image_schema = {
+        "table_name": "Image",
+        "image_id": "SERIAL PRIMARY KEY",
+        "image_path": "STRING",
+        "image_name": "STRING",
+        "image_type": "STRING",
+        "image_embedding": f"FLOAT[{settings.IMAGE_TEXT_DIM}]"
+    }
+    db.create_schema(image_schema)
+    response = db.conn.execute("CALL show_tables() RETURN *;")
+    for row in response:
+        print(row)
+
+    response = db.conn.execute("MATCH (n:Image) RETURN COUNT(*)")
+    for row in response:
+        print(row)

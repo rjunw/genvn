@@ -55,15 +55,16 @@ if __name__ == "__main__":
     embedder = ImageTextEmbedder(model_id=model_id, device="cpu")
 
 
-    image_1 = Image.open("backend/data/bg/uncle_mugen_bg/pack1/Assorted/kitchen_day.webp")
+    image_1 = Image.open("backend/data/assets/bg/uncle_mugen_bg/pack1/Assorted/kitchen_day.webp").convert('RGB')
     image_embedding_1 = embedder.embed_image(image_1)
     print(image_embedding_1.shape)
 
-    image_2 = Image.open("backend/data/bg/uncle_mugen_bg/pack1/Assorted/Janet Lim Napoles International Airport.webp")
+    image_2 = Image.open("backend/data/assets/bg/uncle_mugen_bg/pack1/Assorted/Janet Lim Napoles International Airport.webp").convert('RGB')
     image_embedding_2 = embedder.embed_image(image_2)
 
     text_1 = "kitchen"
     text_embedding_1 = embedder.embed_text(text_1)
+    print(text_embedding_1.shape)
 
     text_2 = "airport"
     text_embedding_2 = embedder.embed_text(text_2)
