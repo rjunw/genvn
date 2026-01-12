@@ -85,6 +85,7 @@ class OllamaAdapter(LLMAdapter):
 
 
 if __name__ == "__main__":
+    import base64
     adapter = OllamaAdapter(url="http://localhost:11434", model="gemma3")
     print(adapter.list_models())
     
@@ -105,5 +106,16 @@ if __name__ == "__main__":
     ])
     print(chunk)
     
+    metadata_extraction_prompt = """
+    You are an expert metadata and keyword captioner. Explain this photo in 1-2 sentences, with as little filler as possible. Do not write anything other than your most important keyword metadata.
+    """    
+    metadata = adapter.chat_chunk(messages=[
+        {
+            "role": "user", 
+            "content": metadata_extraction_prompt,
+            'images': [base64.b64encode(open("backend/data/assets/bg/uncle_mugen_bg/pack1/Assorted/kitchen_day.webp", "rb").read()).decode('utf-8')]
+        }
+    ])
+    print(metadata)
 
     

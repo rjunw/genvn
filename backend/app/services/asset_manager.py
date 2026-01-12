@@ -10,7 +10,9 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
 import json
+import base64
 from app.models.embeddings import ImageTextEmbedder, AudioTextEmbedder
+from app.models.llm_wrapper import OllamaAdapter
 from app.database import get_db
 from app.config import settings
 from pathlib import Path
@@ -23,13 +25,20 @@ class AssetManager:
             model_id=settings.IMAGE_TEXT_MODEL_ID, 
             device=settings.DEVICE
         )
-        self.db = get_db(db_type="kuzu", db_path=db_path)
+        self.llm_adapter = OllamaAdapter(
+            url=settings.OLLAMA_URL,
+            model=settings.OLLAMA_VLM_MODEL
+        )
+
         self.asset_path = asset_path
-        self.conn = self.db.conn
+
+        # want to keep db methods private
+        self._db = get_db(db_type="kuzu", db_path=db_path)
+        self._conn = self._db.conn
         
         # TODO: check if db is empty
 
-    def load_assets(self):
+    def load_assets(self, infer_metadata: bool = True):
         """
         Parse asset directory, embed assets, and index them in the database.
         This should be called once if db is empty, or if existing asset file 
@@ -41,7 +50,7 @@ class AssetManager:
         self.initialize_db()
 
         # check if db is empty
-        response = self.conn.execute("MATCH (n:Image) RETURN COUNT(*)")
+        response = self._conn.execute("MATCH (n:Image) RETURN COUNT(*)")
         for row in response:
             db_rows = row[0]
         
@@ -51,30 +60,32 @@ class AssetManager:
             image_assets = self.parse_image_assets()
 
             # embed assets
-            image_assets = self.embed_image_assets(image_assets)
+            image_assets = self.embed_image_assets(image_assets, infer_metadata=infer_metadata)
 
             print(f"Adding {len(image_assets)} images to database...")
             for asset in tqdm(image_assets):
-                self.conn.execute(
+                self._conn.execute(
                     """
                     CREATE (n:Image {
                         image_path: $image_path,
                         image_name: $image_name,
                         image_type: $image_type,
-                        image_embedding: $image_embedding
+                        image_embedding: $image_embedding,
+                        image_metadata: $image_metadata
                     })
                     """,
                     {
                         "image_path": asset['image_path'],
                         "image_name": asset['image_name'],
                         "image_type": asset['image_type'],
-                        "image_embedding": asset['image_embedding']
+                        "image_embedding": asset['image_embedding'],
+                        "image_metadata": asset['image_metadata']
                     }
                 )
 
             # create HNSW index
             print("Creating HNSW index...")
-            self.conn.execute(
+            self._conn.execute(
                 """
                 CALL CREATE_VECTOR_INDEX(
                     'Image',
@@ -103,9 +114,10 @@ class AssetManager:
             "image_path": "STRING",
             "image_name": "STRING",
             "image_type": "STRING",
-            "image_embedding": f"DOUBLE[{settings.IMAGE_TEXT_DIM}]"
+            "image_embedding": f"DOUBLE[{settings.IMAGE_TEXT_DIM}]",
+            "image_metadata": "STRING"
         }
-        self.db.create_schema(image_schema)
+        self._db.create_schema(image_schema)
 
         # audio_schema = {
         #     "table_name": "Audio",
@@ -153,19 +165,47 @@ class AssetManager:
         """
         pass
 
-    def embed_image_assets(self, image_assets: list):
+    def embed_image_assets(self, image_assets: list, infer_metadata: bool = True):
         """
         Embed image assets and index them in the database.
 
-        TODO: push embeddings to database or return embeddings
+        TODO: Figure out how to reduce latency of metadata extraction - quantize vlm?
         """
         failed = 0
+        if infer_metadata:
+            print("Inferring metadata for image assets...")
         for asset in tqdm(image_assets):
             # try:
             image = Image.open(asset['image_path']).convert('RGB')
 
             embedding = self.image_text_embedder.embed_image(image)
+            metadata_extracted = "No extracted metadata"
+            if infer_metadata:
+                # use llm to infer metadata
+                metadata_extraction_prompt = """
+                You are an expert metadata and keyword captioner. Explain this photo in 1-2 sentences, with as little filler as possible. Do not write anything other than your most important keyword metadata.
+                """
+                with open(asset['image_path'], 'rb') as f:
+                    image_b64 = base64.b64encode(f.read()).decode('utf-8')
+                
+                metadata = self.llm_adapter.chat_chunk(messages=[
+                    {
+                        "role": "user", 
+                        "content": metadata_extraction_prompt,
+                        'images': [image_b64]
+                    }
+                ])
+                # print(metadata)
+                metadata_extracted = metadata['message']['content']
+                # print(metadata_extracted)
+                # embed metadata
+                metadata_embedding = self.image_text_embedder.embed_text(metadata_extracted)
+
+                # hybrid embedding
+                embedding = 0.3*embedding + 0.7*metadata_embedding
+
             asset['image_embedding'] = embedding.cpu().tolist()[0]
+            asset['image_metadata'] = metadata_extracted
             # except Exception as e:
             #     print(f"Failed to embed asset {asset['image_path']}: {e}")
             #     failed += 1
@@ -197,7 +237,7 @@ class AssetManager:
         """
         embedding = self.image_text_embedder.embed_text(query)
         embedding = embedding.cpu().tolist()[0]
-        response = self.conn.execute(
+        response = self._conn.execute(
             """
             CALL QUERY_VECTOR_INDEX(
                 'Image',
@@ -222,7 +262,10 @@ if __name__ == "__main__":
     # print(assets[:5])
     # embeddings = asset_manager.embed_image_assets(assets[:5])
     # print(embeddings[:5])
-    asset_manager.load_assets()
-    query_assets = asset_manager.search_image_assets(query="airport", k=20)
+    asset_manager.load_assets(infer_metadata=True)
+    response = asset_manager._db.conn.execute("MATCH (n:Image) RETURN *")
+    # for row in response.rows_as_dict():
+    #     print(row)
+    query_assets = asset_manager.search_image_assets(query="a quaint bedroom interior", k=5)
     for asset in query_assets:
         print(asset)

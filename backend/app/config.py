@@ -19,7 +19,8 @@ class Settings(BaseSettings):
 
     # ollama settings
     OLLAMA_URL: str = "http://localhost:11434"
-    OLLAMA_MODEL: str = "gemma3"
+    OLLAMA_LLM_MODEL: str = "gemma3"
+    OLLAMA_VLM_MODEL: str = "gemma3"
 
     # embedding models
     IMAGE_TEXT_MODEL_ID: str = "google/siglip2-so400m-patch16-naflex"
