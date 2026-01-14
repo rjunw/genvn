@@ -91,7 +91,7 @@ class AssetManager:
                     'Image',
                     'image_index',
                     'image_embedding',
-                    metric := 'l2'
+                    metric := 'cosine'
                 );
                 """
             )
@@ -183,7 +183,7 @@ class AssetManager:
             if infer_metadata:
                 # use llm to infer metadata
                 metadata_extraction_prompt = """
-                You are an expert metadata and keyword captioner. Explain this photo in 1-2 sentences, with as little filler as possible. Do not write anything other than your most important keyword metadata.
+                You are an expert metadata and keyword captioner. Explain this photo in 1 sentence, with as little filler as possible. Do not write anything other than your most important keyword metadata.
                 """
                 with open(asset['image_path'], 'rb') as f:
                     image_b64 = base64.b64encode(f.read()).decode('utf-8')
@@ -203,6 +203,7 @@ class AssetManager:
 
                 # hybrid embedding
                 embedding = 0.3*embedding + 0.7*metadata_embedding
+                embedding = metadata_embedding
 
             asset['image_embedding'] = embedding.cpu().tolist()[0]
             asset['image_metadata'] = metadata_extracted
@@ -231,28 +232,46 @@ class AssetManager:
         """
         pass
 
-    def search_image_assets(self, query: str, k: int = 5):
+    def search_image_assets(self, query: str, rewrite: bool = False, k: int = 5):
         """
         Search image assets in the database.
         """
+        if rewrite:
+            # use llm to rewrite query
+            metadata_extraction_prompt = """
+            You are an expert metadata and keyword captioner. Rewrite the query in 1 sentence, with as little filler as possible. Do not write anything other than your most important keyword metadata.
+
+            Query: {query}
+            """
+            response = self.llm_adapter.chat_chunk(messages=[
+                {
+                    "role": "user", 
+                    "content": metadata_extraction_prompt.format(query=query)
+                }
+            ])
+            query = response['message']['content']
+
         embedding = self.image_text_embedder.embed_text(query)
         embedding = embedding.cpu().tolist()[0]
+
         response = self._conn.execute(
-            """
+            f"""
             CALL QUERY_VECTOR_INDEX(
                 'Image',
                 'image_index',
                 $embedding,
                 $k,
-                efs:=10000
+                efs:=550
             )
-            RETURN node.image_path, distance
+            RETURN node.image_path, node.image_metadata, distance
             ORDER BY distance;
             """,
             {"embedding": embedding, "k": k}
         )
-        
-        res = response.get_all()
+        res = []
+        for row in response.rows_as_dict():
+            row['query'] = query
+            res.append(row)
         return res
 
 if __name__ == "__main__":
@@ -266,6 +285,7 @@ if __name__ == "__main__":
     response = asset_manager._db.conn.execute("MATCH (n:Image) RETURN *")
     # for row in response.rows_as_dict():
     #     print(row)
-    query_assets = asset_manager.search_image_assets(query="a quaint bedroom interior", k=5)
+    query_assets = asset_manager.search_image_assets(query="a messy kitchen", rewrite=True, k=5)
+    print("ASC")
     for asset in query_assets:
         print(asset)

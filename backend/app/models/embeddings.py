@@ -32,6 +32,8 @@ class ImageTextEmbedder:
         with torch.no_grad():
             inputs = self.tokenizer(
                 [text],
+                max_length=64,
+                truncation=True,
                 return_tensors="pt"
             )
             text_embeddings = self.model.get_text_features(**inputs)
