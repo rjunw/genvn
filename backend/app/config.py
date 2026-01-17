@@ -17,6 +17,9 @@ class Settings(BaseSettings):
 
     DEVICE: str = "cpu"
 
+    # llm settings
+    LLM_API: str = "ollama"
+
     # ollama settings
     OLLAMA_URL: str = "http://localhost:11434"
     OLLAMA_LLM_MODEL: str = "gemma3"
@@ -46,6 +49,6 @@ if __name__ == "__main__":
     print(settings.BASE_PATH)
     print(settings.KUZU_DB_PATH)
     print(settings.ASSET_PATH)
-    print(settings.OLLAMA_URL, settings.OLLAMA_MODEL)
+    print(settings.OLLAMA_URL, settings.OLLAMA_VLM_MODEL)
     print(settings.IMAGE_TEXT_MODEL_ID, settings.IMAGE_TEXT_DIM)
     print(settings.AUDIO_TEXT_MODEL_ID, settings.AUDIO_TEXT_DIM)

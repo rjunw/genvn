@@ -13,6 +13,7 @@ import json
 import base64
 from app.models.embeddings import ImageTextEmbedder, AudioTextEmbedder
 from app.models.llm_wrapper import OllamaAdapter
+from app.models.api_schemas import AssetRequest 
 from app.database import get_db
 from app.config import settings
 from pathlib import Path
@@ -25,7 +26,7 @@ class AssetManager:
             model_id=settings.IMAGE_TEXT_MODEL_ID, 
             device=settings.DEVICE
         )
-        self.llm_adapter = OllamaAdapter(
+        self.vlm_adapter = OllamaAdapter(
             url=settings.OLLAMA_URL,
             model=settings.OLLAMA_VLM_MODEL
         )
@@ -115,7 +116,8 @@ class AssetManager:
             "image_name": "STRING",
             "image_type": "STRING",
             "image_embedding": f"DOUBLE[{settings.IMAGE_TEXT_DIM}]",
-            "image_metadata": "STRING"
+            "image_metadata": "STRING",
+            "image_category": "STRING"
         }
         self._db.create_schema(image_schema)
 
@@ -151,10 +153,13 @@ class AssetManager:
             # if '.png' in str(file):
             #     continue
 
+            # get image category
+            image_category = str(file).split("backend/data/assets")[1].split("/")[0]
             assets.append({
                 "image_path": str(file),
                 "image_name": file.name,
-                "image_type": file.suffix.lower()
+                "image_type": file.suffix.lower(),
+                "image_category": image_category
             })
         
         return assets
@@ -183,12 +188,12 @@ class AssetManager:
             if infer_metadata:
                 # use llm to infer metadata
                 metadata_extraction_prompt = """
-                You are an expert metadata and keyword captioner. Explain this photo in 1 sentence, with as little filler as possible. Do not write anything other than your most important keyword metadata.
+                You are an expert metadata and keyword captioner. Explain this image in 1 sentence, with as little filler as possible. Do not write anything other than your most important keyword metadata.
                 """
                 with open(asset['image_path'], 'rb') as f:
                     image_b64 = base64.b64encode(f.read()).decode('utf-8')
                 
-                metadata = self.llm_adapter.chat_chunk(messages=[
+                metadata = self.vlm_adapter.chat_chunk(messages=[
                     {
                         "role": "user", 
                         "content": metadata_extraction_prompt,
@@ -232,26 +237,50 @@ class AssetManager:
         """
         pass
 
-    def search_image_assets(self, query: str, rewrite: bool = False, k: int = 5):
+    def build_asset_request(self, query: str):
+        """
+        Build asset request from query.
+        """
+
+        metadata_extraction_prompt = """
+        You are an expert metadata and keyword captioner. Rewrite the query in 1 sentence, with as little filler as possible. Isolate the setting for background image selection and the type of feeling that should be evoked by the audio that should be played. Do not write anything other than your most important keyword metadata.
+
+        Query: {query}
+
+        Return a json object with the following keys:
+        - image_query: the rewritten query for image selection
+        - audio_query: the rewritten query for audio selection
+        """
+        response = self.vlm_adapter.chat_chunk(messages=[
+            {
+                "role": "user", 
+                "content": metadata_extraction_prompt.format(query=query)
+            }
+        ],
+        _format="json")
+        image_query = json.loads(response['message']['content'])['image_query']
+        audio_query = json.loads(response['message']['content'])['audio_query']
+
+        assets = {
+            "image": AssetRequest(
+                asset_type="image",
+                query=image_query,
+                asset_category="bg"
+            ),
+            "audio": AssetRequest(
+                asset_type="audio",
+                query=audio_query
+            )
+        }
+
+        return assets
+
+    def search_image_assets(self, asset_request: AssetRequest, k: int = 5):
         """
         Search image assets in the database.
         """
-        if rewrite:
-            # use llm to rewrite query
-            metadata_extraction_prompt = """
-            You are an expert metadata and keyword captioner. Rewrite the query in 1 sentence, with as little filler as possible. Do not write anything other than your most important keyword metadata.
 
-            Query: {query}
-            """
-            response = self.llm_adapter.chat_chunk(messages=[
-                {
-                    "role": "user", 
-                    "content": metadata_extraction_prompt.format(query=query)
-                }
-            ])
-            query = response['message']['content']
-
-        embedding = self.image_text_embedder.embed_text(query)
+        embedding = self.image_text_embedder.embed_text(asset_request.query)
         embedding = embedding.cpu().tolist()[0]
 
         response = self._conn.execute(
@@ -270,7 +299,7 @@ class AssetManager:
         )
         res = []
         for row in response.rows_as_dict():
-            row['query'] = query
+            row['query'] = asset_request.query
             res.append(row)
         return res
 
@@ -285,7 +314,9 @@ if __name__ == "__main__":
     response = asset_manager._db.conn.execute("MATCH (n:Image) RETURN *")
     # for row in response.rows_as_dict():
     #     print(row)
-    query_assets = asset_manager.search_image_assets(query="a messy kitchen", rewrite=True, k=5)
+    asset_request = asset_manager.build_asset_request(query="He walked into the messy, red kitchen, it was dark and quiet.")
+    print(asset_request)
+    query_assets = asset_manager.search_image_assets(asset_request=asset_request['image'], k=20)
     print("ASC")
     for asset in query_assets:
         print(asset)

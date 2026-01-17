@@ -38,3 +38,12 @@ class Chunk(BaseModel):
     is_final: bool = False # whether this is the final chunk
     fx: Union[Dict[str, str], None] = None # any events to trigger
     
+# ------------------------ Incoming Asset Requests -------------------------
+
+class AssetRequest(BaseModel):
+    """
+    Incoming request from frontend engine to asset manager.
+    """
+    asset_type: str # type of asset to retrieve
+    asset_category: Union[str, None] = None # category of asset to retrieve
+    query: str # query to retrieve assets

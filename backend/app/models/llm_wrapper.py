@@ -7,7 +7,7 @@
 
 import abc 
 import requests
-from typing import Generator, List, Dict
+from typing import Generator, List, Dict, Union
 
 class LLMAdapter(abc.ABC):
     """
@@ -44,7 +44,7 @@ class OllamaAdapter(LLMAdapter):
         self.chat_url = f"{self.url}/api/chat" # natural language chat
 
     # for now, just use messages, rather than allowing kwargs
-    def chat_stream(self, messages: List[Dict[str, str]], options: Dict[str, str] = {}):
+    def chat_stream(self, messages: List[Dict[str, str]], options: Dict[str, str] = {}, _format: Union[str, None] = None):
         """
         Args:
             messages: List of messages to send to LLM, defined by 'role' and 'content'
@@ -54,8 +54,10 @@ class OllamaAdapter(LLMAdapter):
             "model": self.model,
             "messages": messages,
             "stream": True,
-            "options": options 
+            "options": options,
         }
+        if _format: 
+            payload["format"] = _format
 
         # stream response https://stackoverflow.com/questions/57497833/python-requests-stream-data-from-api
         with requests.post(self.chat_url, json=payload, stream=True) as resp:
@@ -63,7 +65,7 @@ class OllamaAdapter(LLMAdapter):
                 if line:
                     yield line
 
-    def chat_chunk(self, messages: List[Dict[str, str]], options: Dict[str, str] = {}):
+    def chat_chunk(self, messages: List[Dict[str, str]], options: Dict[str, str] = {}, _format: Union[str, None] = None):
         """
         Args:
             messages: List of messages to send to LLM, defined by 'role' and 'content'
@@ -73,8 +75,11 @@ class OllamaAdapter(LLMAdapter):
             "model": self.model,
             "messages": messages,
             "stream": False,
-            "options": options
+            "options": options,
         }
+        if _format:
+            payload["format"] = _format
+
         response = requests.post(self.chat_url, json=payload)
         return response.json()
 

@@ -8,9 +8,11 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse, StreamingResponse
 from app.models.api_schemas import StoryRequest, Chunk 
 from app.services.rag_engine import GraphRAG
+from app.config import settings
+from app.services.rag_engine import get_llm_adapter
 
 router = APIRouter() 
-rag_engine = GraphRAG()
+rag_engine = GraphRAG(llm_adapter=get_llm_adapter())
 
 @router.post("/generate_stream")
 async def generate_stream(request: StoryRequest):

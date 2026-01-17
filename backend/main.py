@@ -4,7 +4,7 @@
 
 from fastapi import FastAPI
 from app.routers import story_api
-
+from app.routers import asset_api
 
 version = "0.0.1"
 
@@ -22,7 +22,11 @@ app.include_router(
     tags=["story"]
 )
 
-# TODO: asset router if I add a asset upload/edit feature
+app.include_router(
+    asset_api.router,
+    prefix=f"/api/asset",
+    tags=["asset"]
+)
 
 # --------------------------- Health Check ---------------------------
 @app.get("/health")

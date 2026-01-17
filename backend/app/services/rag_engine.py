@@ -11,6 +11,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"
 
 from app.models.llm_wrapper import LLMAdapter
 from typing import List, Dict
+from app.config import settings
+from app.models.llm_wrapper import OllamaAdapter
 
 class GraphRAG:
     """
@@ -92,8 +94,14 @@ class GraphRAG:
         
         return system_prompt
 
+def get_llm_adapter():
+    if settings.LLM_API == "ollama":
+        return OllamaAdapter(
+            url=settings.OLLAMA_URL,
+            model=settings.OLLAMA_VLM_MODEL
+        )
+
 if __name__ == "__main__":
-    from app.models.llm_wrapper import OllamaAdapter
     user_choice = "But Why?"
     history = [
         {"role": "user", "content": "Are you sure the sky is blue?"},

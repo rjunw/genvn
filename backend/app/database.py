@@ -74,6 +74,12 @@ def get_db(db_type: str = "kuzu", db_path: Path = settings.KUZU_DB_PATH / "vdb.k
     else:
         raise NotImplementedError(f"Unknown database type: {db_type}")
 
+def delete_db(db_type: str = "kuzu", db_path: Path = settings.KUZU_DB_PATH / "vdb.kuzu"):
+    if db_type == "kuzu":
+        os.remove(db_path)
+    else:
+        raise NotImplementedError(f"Unknown database type: {db_type}")
+
 if __name__ == "__main__":
     db = get_db()
     print(db.conn)
